@@ -6,71 +6,62 @@
 //  Copyright © 2019 Dino Ali. All rights reserved.
 //
 
+import Alamofire
+import SwiftyJSON
 import UIKit
 
-class ViewController: UIViewController  , UITableViewDelegate , UITableViewDataSource{
+class ViewController: UIViewController {
+    @IBOutlet var tblList: UITableView!
     
-    @IBOutlet var tblList : UITableView!
-    let data: [String] = ["kirit", "kevin", "hitesh"]
-    
-    
-    
-//    lazy var users: [UserModel] = [
-//        UserModel(nama: "Azmi", hobi: hobiAzmi),
-//        UserModel(nama: "Rudi", hobi: hobiRudi),
-//        UserModel(nama: "Sudin", hobi: hobiSudin)
-//    ]
-//
-//    var hobiAzmi = [
-//        Hobi(nama: "Bola"),
-//        Hobi(nama: "Voli"),
-//        Hobi(nama: "Basket")
-//    ]
-//
-//    var hobiRudi = [
-//        Hobi(nama: "Bola"),
-//        Hobi(nama: "nonton"),
-//        Hobi(nama: "joging")
-//    ]
-//
-//    var hobiSudin = [
-//        Hobi(nama: "game"),
-//        Hobi(nama: "gym"),
-//        Hobi(nama: "salon")
-//    ]
-//
-    
-    lazy var dataSiswa: [Sekolah] = [
-        Sekolah(nama: "SMA 1 Solok", kelas: nil, alamat: "Solok"),
-        Sekolah(nama: "MAN 1 Batusangkar", kelas: nil, alamat: "Batusangkar"),
-        Sekolah(nama: "SMK Muhammadiyah", kelas: nil, alamat: "Cilandak")
-    ]
+    var listName: [UserModel]?
+    var listAddress: [UserAddress]?
+    var listComp: [UserCompany]?
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        tblList.delegate = self
-        tblList.dataSource = self
-        tblList.rowHeight = UITableView.automaticDimension
-        
-        for i in dataSiswa {
-            print("Sekolah: \(i.nama)\nAlamat: \(i.alamat)")
-        }
-        
+        setupComponent()
+        setupData()
     }
     
-
+    func setupComponent() {
+        tblList.rowHeight = UITableView.automaticDimension
+        tblList.estimatedRowHeight = 50
+    }
     
+    func setupData() {
+        Alamofire.request("https://jsonplaceholder.typicode.com/users").responseJSON { response in
+            switch response.result {
+            case .success(let value):
+                let data = JSON(value)
+                if let item = data.array {
+                    self.listName = item.map { UserModel(json: JSON($0.object)) }
+                }
+                self.tblList.reloadData()
+            case .failure(let error):
+                print(error.localizedDescription)
+            }
+        }
+    }
+}
+
+extension ViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return data.count
+        return listName?.count ?? 0
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CellData") as! UserTableViewCell
-        cell.nameLabel.text = "Azmi"
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cellID", for: indexPath) as! UserTableViewCell
+        cell.users = listName?[indexPath.row]
+        
         return cell
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        
+        tableView.deselectRow(at: indexPath, animated: true)
+        let mainStoryboard = UIStoryboard(name: "Main", bundle: nil)
+        if let vc = mainStoryboard.instantiateViewController(withIdentifier: "detailVC") as? DetailViewController {
+            vc.reciveListName = listName?[indexPath.row]
+            navigationController?.pushViewController(vc, animated: true)
+        }
     }
 }
